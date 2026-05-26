@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Liverpool Stock Finder</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: { colors: { liverpool: '#E8002D' } } }
+    }
+  </script>
+  <style>
+    .spinner { animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .fade-in { animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen font-sans">
+
+  <!-- Header -->
+  <header class="bg-[#E8002D] shadow-lg">
+    <div class="max-w-5xl mx-auto px-4 py-4 flex items-center gap-3">
+      <div class="bg-white rounded-full w-10 h-10 flex items-center justify-center shadow-sm">
+        <span class="text-xl">🛍️</span>
+      </div>
+      <div>
+        <h1 class="text-white text-xl font-bold leading-tight">Liverpool Stock Finder</h1>
+        <p class="text-red-200 text-xs">Consulta disponibilidad en tiendas físicas</p>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-4 py-8">
+
+    <!-- Search card -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-8">
+      <form id="searchForm" class="space-y-4">
+        <div class="flex flex-col sm:flex-row gap-4">
+          <div class="flex-1">
+            <label class="block text-sm font-semibold text-gray-600 mb-1">SKU del producto</label>
+            <input
+              id="skuInput"
+              type="text"
+              placeholder="Ej: 1192492633"
+              autocomplete="off"
+              class="w-full border border-gray-200 rounded-xl px-4 py-3 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#E8002D] transition"
+            />
+          </div>
+          <div class="sm:w-60">
+            <label class="block text-sm font-semibold text-gray-600 mb-1">Estado</label>
+            <select
+              id="estadoSelect"
+              class="w-full border border-gray-200 rounded-xl px-4 py-3 text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-[#E8002D] transition"
+            >
+              <option value="NACIONAL">🌍 Todo el país</option>
+              {% for estado in estados %}
+              <option value="{{ estado }}">{{ estado.title() }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <button
+          type="submit"
+          id="searchBtn"
+          class="w-full bg-[#E8002D] hover:bg-red-700 active:bg-red-800 text-white font-semibold py-3 rounded-xl transition-colors duration-150 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          <span id="btnIcon" class="text-lg">🔍</span>
+          <span id="btnText">Buscar Stock</span>
+        </button>
+      </form>
+    </div>
+
+    <!-- Loading -->
+    <div id="loadingState" class="hidden text-center py-16">
+      <div class="inline-block w-10 h-10 border-4 border-[#E8002D] border-t-transparent rounded-full spinner mb-4"></div>
+      <p class="text-gray-500 font-medium">Consultando tiendas...</p>
+      <p class="text-gray-400 text-sm mt-1" id="loadingHint">Esto puede tomar unos segundos</p>
+    </div>
+
+    <!-- Summary + results -->
+    <div id="resultsSection" class="hidden fade-in">
+      <div id="summary" class="flex flex-wrap items-center gap-3 mb-6"></div>
+      <div id="grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+    </div>
+
+    <!-- Empty -->
+    <div id="emptyState" class="hidden fade-in text-center py-20">
+      <div class="text-6xl mb-4">📦</div>
+      <p class="text-xl font-semibold text-gray-600">Sin stock disponible</p>
+      <p class="text-gray-400 text-sm mt-1">No hay tiendas con este SKU en el área seleccionada</p>
+    </div>
+
+    <!-- Error -->
+    <div id="errorState" class="hidden fade-in text-center py-20">
+      <div class="text-6xl mb-4">⚠️</div>
+      <p class="text-xl font-semibold text-gray-600" id="errorMsg">Error al consultar</p>
+      <p class="text-gray-400 text-sm mt-1">Verifica el SKU e intenta de nuevo</p>
+    </div>
+
+  </main>
+
+  <script>
+    const form       = document.getElementById('searchForm');
+    const btnIcon    = document.getElementById('btnIcon');
+    const btnText    = document.getElementById('btnText');
+    const searchBtn  = document.getElementById('searchBtn');
+    const loading    = document.getElementById('loadingState');
+    const loadingHint= document.getElementById('loadingHint');
+    const results    = document.getElementById('resultsSection');
+    const emptyState = document.getElementById('emptyState');
+    const errorState = document.getElementById('errorState');
+    const grid       = document.getElementById('grid');
+    const summary    = document.getElementById('summary');
+
+    function hideAll() {
+      [loading, results, emptyState, errorState].forEach(el => el.classList.add('hidden'));
+    }
+
+    function setLoading(on, nacional) {
+      searchBtn.disabled = on;
+      if (on) {
+        btnIcon.innerHTML = '<span class="inline-block w-5 h-5 border-2 border-white border-t-transparent rounded-full spinner"></span>';
+        btnText.textContent = 'Buscando...';
+        loadingHint.textContent = nacional ? 'Consultando los 31 estados — espera un momento' : 'Consultando tiendas...';
+      } else {
+        btnIcon.textContent = '🔍';
+        btnText.textContent = 'Buscar Stock';
+      }
+    }
+
+    function badgeColor(status) {
+      const s = (status || '').toLowerCase();
+      if (s.includes('exhibido')) return 'bg-green-100 text-green-700';
+      if (s.includes('bodega'))   return 'bg-yellow-100 text-yellow-700';
+      return 'bg-gray-100 text-gray-600';
+    }
+
+    function pieceColor(n) {
+      if (n >= 15) return 'text-green-600';
+      if (n >= 6)  return 'text-yellow-500';
+      return 'text-red-500';
+    }
+
+    function renderCard(t) {
+      const n = t.numberOfPieces;
+      return `
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow p-5 fade-in">
+          <div class="flex items-start justify-between mb-3">
+            <span class="text-2xl">📍</span>
+            <span class="text-xs font-semibold px-2 py-1 rounded-full ${badgeColor(t.inventoryStatus)}">${t.inventoryStatus}</span>
+          </div>
+          <p class="text-sm font-semibold text-gray-700 leading-snug mb-4">${t.storeName}</p>
+          <p class="text-4xl font-extrabold ${pieceColor(n)}">${n}<span class="text-sm font-normal text-gray-400 ml-1">pzs</span></p>
+        </div>`;
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const sku    = document.getElementById('skuInput').value.trim();
+      const estado = document.getElementById('estadoSelect').value;
+      if (!sku) {
+        document.getElementById('skuInput').focus();
+        return;
+      }
+
+      hideAll();
+      loading.classList.remove('hidden');
+      setLoading(true, estado === 'NACIONAL');
+
+      try {
+        const res  = await fetch('/api/buscar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sku, estado }),
+        });
+        const data = await res.json();
+
+        hideAll();
+
+        if (data.error) {
+          document.getElementById('errorMsg').textContent = data.error;
+          errorState.classList.remove('hidden');
+          return;
+        }
+
+        if (data.total === 0) {
+          emptyState.classList.remove('hidden');
+          return;
+        }
+
+        const totalPiezas = data.tiendas.reduce((s, t) => s + t.numberOfPieces, 0);
+        summary.innerHTML = `
+          <span class="bg-green-100 text-green-700 text-sm font-semibold px-3 py-1.5 rounded-full">
+            ✅ ${data.total} tienda${data.total !== 1 ? 's' : ''} con stock
+          </span>
+          <span class="bg-blue-50 text-blue-600 text-sm font-semibold px-3 py-1.5 rounded-full">
+            📦 ${totalPiezas} piezas en total
+          </span>
+          <span class="text-gray-400 text-sm">SKU: ${data.sku}</span>`;
+
+        grid.innerHTML = data.tiendas.map(renderCard).join('');
+        results.classList.remove('hidden');
+
+      } catch {
+        hideAll();
+        document.getElementById('errorMsg').textContent = 'Error de conexión. Intenta de nuevo.';
+        errorState.classList.remove('hidden');
+      } finally {
+        setLoading(false);
+      }
+    });
+  </script>
+</body>
+</html>
