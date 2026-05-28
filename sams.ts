@@ -1,3 +1,6 @@
+import { readFileSync } from "fs";
+import { resolve } from "path";
+
 const NEARBY_NODES_URL =
   "https://www.sams.com.mx/orchestra/graphql/nearByNodes/383d44ac5962240870e513c4f53bb3d05a143fd7b19acb32e8a83e39f1ed266c";
 
@@ -350,7 +353,8 @@ async function consultarSkuEnClub(sku: string, node: SamsNode) {
 
   if (!response.ok) {
     if (response.status === 412) {
-      throw new Error("Sam's Club bloqueó la consulta automática (PerimeterX 412). Intenta con un HAR/cURL nuevo o espera unos minutos.");
+      console.log(`[Sam's] ${getNodeName(node)} SKU ${sku}: bloqueado por PerimeterX (412) — saltando este club`);
+      return null; // non-fatal: skip this club and continue with others
     }
     console.log(`[Sam's] ${getNodeName(node)} SKU ${sku}: HTTP ${response.status}`);
     return null;
@@ -402,6 +406,55 @@ function productToRows(product: any, node: SamsNode) {
     available: "true",
     stateName: getNodeState(node) || address.city || "Sam's Club",
   }));
+}
+
+// Convert the flat JSON club record to the SamsNode shape expected by the rest of the code
+function jsonClubToNode(club: any): SamsNode {
+  return {
+    id: String(club.id),
+    displayName: club.displayName,
+    address: {
+      city: club.city,
+      state: club.state,
+      stateOrProvinceCode: club.state,
+      postalCode: club.postalCode || "",
+      addressLineOne: club.addressLineOne || "",
+      address1: club.addressLineOne || "",
+    },
+    geoPoint: {
+      latitude: club.latitude,
+      longitude: club.longitude,
+    },
+    capabilities: club.accessPointId ? [{ accessPointId: club.accessPointId }] : [],
+  };
+}
+
+// Search all saved clubs from data/sams-clubs.json — no CP required
+export async function buscarSamsNacional(sku: string) {
+  const rawClubs: any[] = JSON.parse(readFileSync(resolve("data/sams-clubs.json"), "utf-8"));
+  const nodes: SamsNode[] = rawClubs.map(jsonClubToNode);
+  const results: any[] = [];
+
+  for (let i = 0; i < nodes.length; i += CONCURRENCY_LIMIT) {
+    if (i > 0) await new Promise(r => setTimeout(r, 800)); // pace requests to avoid PX rate limits
+    const batch = nodes.slice(i, i + CONCURRENCY_LIMIT);
+    const batchResults = await Promise.all(
+      batch.map(async (node) => {
+        const product = await consultarSkuEnClub(sku, node);
+        return productToRows(product, node);
+      })
+    );
+    for (const rows of batchResults) {
+      results.push(...rows);
+    }
+  }
+
+  const unique = new Map<string, any>();
+  for (const row of results) {
+    unique.set(`${row.storeId}|${row.storeName}`, row);
+  }
+
+  return [...unique.values()];
 }
 
 export async function buscarSams(sku: string, cp?: string) {

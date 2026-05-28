@@ -325,8 +325,16 @@ async function fetchCatalog(): Promise<any[]> {
     if (i + BATCH < allAsins.length) await sleep(1200);
   }
 
-  _cache = results;
-  _cacheExpiry = Date.now() + CACHE_TTL;
+  // Only cache successful results — never cache an empty list from a CAPTCHA failure
+  if (results.length > 0) {
+    _cache = results;
+    _cacheExpiry = Date.now() + CACHE_TTL;
+  }
+
+  if (results.length === 0) {
+    throw new Error("Amazon no devolvió productos. Es posible que haya mostrado CAPTCHA. Intenta de nuevo en unos minutos.");
+  }
+
   return results;
 }
 

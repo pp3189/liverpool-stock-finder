@@ -1745,7 +1745,7 @@ export default function App() {
                 {(selectedStoreKey === "chedraui" || selectedStoreKey === "sams") && (
                   <div>
                     <label htmlFor="chedraui-cp" className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">
-                      Código Postal {selectedStoreKey === "sams" ? "Sam's Club (requerido)" : "Chedraui (opcional)"}
+                      Código Postal {selectedStoreKey === "sams" ? "Sam's Club (opcional)" : "Chedraui (opcional)"}
                     </label>
                     <input
                       id="chedraui-cp"
@@ -1753,7 +1753,7 @@ export default function App() {
                       inputMode="numeric"
                       maxLength={5}
                       className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-slate-950 font-mono text-sm tracking-wider font-semibold focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all placeholder:text-slate-400"
-                      placeholder={selectedStoreKey === "sams" ? "Ej. 62270 o 72000" : "Ej. 91070; vacío = escaneo por estado/nacional"}
+                      placeholder={selectedStoreKey === "sams" ? "Opcional — vacío busca en todos los clubs" : "Ej. 91070; vacío = escaneo por estado/nacional"}
                       value={chedrauiCp}
                       onChange={(e) => setChedrauiCp(e.target.value.replace(/\D/g, "").slice(0, 5))}
                       onKeyDown={(e) => {
@@ -1764,7 +1764,7 @@ export default function App() {
                     />
                     <p className="mt-1.5 text-[9px] text-slate-400 font-semibold leading-relaxed">
                       {selectedStoreKey === "sams"
-                        ? "Sam's valida la compra real contra los clubs cercanos a ese CP. El modo nacional queda desactivado para evitar bloqueos."
+                        ? "Sin CP → revisa todos los clubs registrados. Con CP → solo clubs cercanos a esa zona postal."
                         : "Si lo llenas, Chedraui valida compra real para ese CP. Si lo dejas vacío, escanea CPs representativos de la ubicación elegida."}
                     </p>
                     {selectedStoreKey === "sams" && (

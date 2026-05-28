@@ -5,7 +5,7 @@ import { buscarChedraui } from "./chedraui";
 import { buscarPalacio } from "./palacio";
 import { buscarJuguetibici } from "./juguetibici";
 import { buscarAmazon, clearAmazonCache } from "./amazon";
-import { buscarSams, setSamsPxCookies, getSamsPxCookieStatus } from "./sams";
+import { buscarSams, buscarSamsNacional, setSamsPxCookies, getSamsPxCookieStatus } from "./sams";
 import { startSamsCookieAutoRefresh, refreshSamsCookiesViaPlaywright } from "./sams-cookie-refresher";
 
 const app = express();
@@ -123,10 +123,11 @@ app.post("/api/buscar", async (req, res) => {
     } else if (activeStore === "amazon") {
       tiendas = await buscarAmazon(cleanSku);
     } else if (activeStore === "sams") {
-      if (!cleanCp || cleanCp.length !== 5) {
-        return res.status(400).json({ error: "Para Sam's Club ingresa un código postal de 5 dígitos." });
+      if (cleanCp && cleanCp.length === 5) {
+        tiendas = await buscarSams(cleanSku, cleanCp);
+      } else {
+        tiendas = await buscarSamsNacional(cleanSku);
       }
-      tiendas = await buscarSams(cleanSku, cleanCp || undefined);
     } else {
       if (cleanEstado === "NACIONAL") {
         tiendas = await buscarNacional(cleanSku);
@@ -142,7 +143,7 @@ app.post("/api/buscar", async (req, res) => {
       tiendas,
       total: tiendas.length,
       sku: cleanSku,
-      estado: (activeStore === "palacio" || activeStore === "juguetibici" || activeStore === "amazon") ? "Nacional" : (activeStore === "chedraui" || activeStore === "sams") && cleanCp ? `CP ${cleanCp}` : cleanEstado,
+      estado: (activeStore === "palacio" || activeStore === "juguetibici" || activeStore === "amazon") ? "Nacional" : activeStore === "sams" ? (cleanCp ? `CP ${cleanCp}` : "Todos los clubs") : activeStore === "chedraui" && cleanCp ? `CP ${cleanCp}` : cleanEstado,
       storeKey: activeStore,
       timestamp: new Date().toISOString()
     });
