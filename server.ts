@@ -5,7 +5,7 @@ import { buscarChedraui } from "./chedraui";
 import { buscarPalacio } from "./palacio";
 import { buscarJuguetibici } from "./juguetibici";
 import { buscarAmazon, clearAmazonCache } from "./amazon";
-import { buscarSams, buscarSamsNacional, setSamsPxCookies, getSamsPxCookieStatus } from "./sams";
+import { buscarSams, buscarSamsNacional, setSamsPxCookies, getSamsPxCookieStatus, isSessionBurned, resetPxBlockCount } from "./sams";
 import { startSamsCookieAutoRefresh, refreshSamsCookiesViaPlaywright } from "./sams-cookie-refresher";
 
 const app = express();
@@ -127,6 +127,14 @@ app.post("/api/buscar", async (req, res) => {
         tiendas = await buscarSams(cleanSku, cleanCp);
       } else {
         tiendas = await buscarSamsNacional(cleanSku);
+      }
+      if (tiendas.length === 0 && isSessionBurned()) {
+        console.log("[Sam's] Sesión quemada detectada — renovando cookies y reintentando...");
+        resetPxBlockCount();
+        await refreshSamsCookiesViaPlaywright().catch((e: any) => console.error("[Sam's] Error renovando cookies:", e?.message));
+        tiendas = cleanCp && cleanCp.length === 5
+          ? await buscarSams(cleanSku, cleanCp)
+          : await buscarSamsNacional(cleanSku);
       }
     } else {
       if (cleanEstado === "NACIONAL") {

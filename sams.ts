@@ -12,6 +12,25 @@ const PX_COOKIE_TTL = 1000 * 60 * 90; // 90 minutes
 let _pxCookies = "";
 let _pxCookiesExpiry = 0;
 
+// Track recent 412 blocks to detect burned sessions
+let _recentBlockCount = 0;
+let _recentBlockTimestamp = 0;
+
+export function recordPxBlock(): void {
+  _recentBlockCount++;
+  _recentBlockTimestamp = Date.now();
+}
+
+export function resetPxBlockCount(): void {
+  _recentBlockCount = 0;
+}
+
+/** Returns true if ≥3 clubs got 412 in the last 60 seconds — session is burned */
+export function isSessionBurned(): boolean {
+  if (_recentBlockCount < 3) return false;
+  return Date.now() - _recentBlockTimestamp < 60_000;
+}
+
 export function setSamsPxCookies(rawCookies: string): void {
   _pxCookies = rawCookies.trim();
   _pxCookiesExpiry = Date.now() + PX_COOKIE_TTL;
@@ -353,6 +372,7 @@ async function consultarSkuEnClub(sku: string, node: SamsNode) {
 
   if (!response.ok) {
     if (response.status === 412) {
+      recordPxBlock();
       console.log(`[Sam's] ${getNodeName(node)} SKU ${sku}: bloqueado por PerimeterX (412) — saltando este club`);
       return null; // non-fatal: skip this club and continue with others
     }
