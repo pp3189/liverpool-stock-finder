@@ -70,7 +70,7 @@ const STORES: BrandConfig[] = [
     borderColor: "border-amber-200",
     textColor: "text-amber-800",
     accentColor: "#cda250",
-    placeholderSku: "43721980",
+    placeholderSku: "pikachu",
     urlTemplate: (sku) => `https://www.elpalaciodehierro.com/buscar?q=${sku}`,
     logoText: "PH",
     isReal: true,
@@ -100,7 +100,7 @@ const STORES: BrandConfig[] = [
     borderColor: "border-green-200",
     textColor: "text-green-800",
     accentColor: "#16a34a",
-    placeholderSku: "pokemon-tcg-sobre-de-refuerzo-sv-destinos-en-conflicto",
+    placeholderSku: "rompecabezas-4d-build-pokemon-pikachu-6075061",
     urlTemplate: (sku) => `https://juguetibici.com/search?q=${sku}&type=product`,
     logoText: "JB",
     isReal: true,
@@ -177,11 +177,10 @@ const DEFAULT_ADMIN_FIXED_SKUS: SavedSkuItem[] = [
   { sku: "1145678123", label: "Pokémon TCG: Elite Trainer Box Scarlet & Violet Base", category: "Cartas TCG", storeKey: "liverpool" },
   { sku: "1128761234", label: "Peluche de Pikachu Gigante de Felpa Premium (60cm)", category: "Peluches", storeKey: "liverpool" },
 
-  // Palacio de Hierro
-  { sku: "43799654", label: "Reloj Edición Diseñador Pokémon Pikachu (Acabado Baño Oro)", category: "Moda y Joyería", storeKey: "palacio" },
-  { sku: "43721980", label: "Réplica de Poké Ball Metálica de Ultra Precisión (The Wand Company)", category: "Coleccionables", storeKey: "palacio" },
-  { sku: "43711223", label: "Mochila de Diseñador Loungefly Pokémon Eevee Sweet Floral", category: "Accesorios", storeKey: "palacio" },
-  { sku: "43788991", label: "Estatua Charizard Gigante Premium en Resina Sólida", category: "Coleccionables", storeKey: "palacio" },
+  // Palacio de Hierro — accepts keyword search (e.g. "pikachu", "pokemon tcg")
+  { sku: "pikachu", label: "Búsqueda: Pikachu en Palacio de Hierro", category: "Búsqueda por Keyword", storeKey: "palacio" },
+  { sku: "pokemon tcg", label: "Búsqueda: Pokemon TCG en Palacio de Hierro", category: "Búsqueda por Keyword", storeKey: "palacio" },
+  { sku: "pokemon", label: "Búsqueda: Pokemon en Palacio de Hierro", category: "Búsqueda por Keyword", storeKey: "palacio" },
 
   // Sam's Club
   { sku: "980012555", label: "Multi-Pack Familiar: Figuras de Acción de Batalla Pokémon (8 Pzs)", category: "Figuras", storeKey: "sams" },
@@ -209,10 +208,10 @@ const DEFAULT_ADMIN_FIXED_SKUS: SavedSkuItem[] = [
   { sku: "824911", label: "Cinturón Clip 'N' Go Poké Ball con mini figura Gengar", category: "Accesorios", storeKey: "toysrus" },
   { sku: "824922", label: "Estadio Arena de Combates Pokémon Coliseum Deluxe Set", category: "Juguetes de Acción", storeKey: "toysrus" },
 
-  // Juguetibici
-  { sku: "7501234888", label: "Figura Coleccionable Funko Pop! Bulbasaur de Vinilo #504", category: "Coleccionables", storeKey: "juguetibici" },
-  { sku: "7501234221", label: "Set Oficial de Mini Figuras Estática Región Kanto Clásica", category: "Figuras", storeKey: "juguetibici" },
-  { sku: "7501234990", label: "Peluche de Gengar Fantasmagórico Súper Esponjoso (30cm)", category: "Peluches", storeKey: "juguetibici" }
+  // Juguetibici — accepts product handle (URL slug) or keyword
+  { sku: "rompecabezas-4d-build-pokemon-pikachu-6075061", label: "Rompecabezas 4D Build Pokémon Pikachu", category: "Juguetes", storeKey: "juguetibici" },
+  { sku: "pikachu", label: "Búsqueda: Pikachu en Juguetibici", category: "Búsqueda por Keyword", storeKey: "juguetibici" },
+  { sku: "pokemon", label: "Búsqueda: Pokemon en Juguetibici", category: "Búsqueda por Keyword", storeKey: "juguetibici" }
 ];
 
 const POKEMON_LOCATIONS = [

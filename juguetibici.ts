@@ -20,8 +20,9 @@ function normalizeHandle(value: string): string | null {
     return m ? m[1] : null;
   }
 
-  // Pure handle: only lowercase letters, digits, hyphens
-  if (/^[a-z0-9][a-z0-9-]*$/.test(value)) return value;
+  // Pure handle: must contain at least one hyphen (Shopify handles are multi-word slugs like "pokemon-booster-sv")
+  // Single words and bare numbers fall through to keyword search
+  if (/^[a-z0-9][a-z0-9-]*$/.test(value) && value.includes("-")) return value;
 
   return null;
 }
