@@ -1,0 +1,6 @@
+{
+  "name": "Liverpool Stock Finder",
+  "description": "pkmonster - Consola general de distribución, buscador de stock e inventarios Pokémon.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

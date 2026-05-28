@@ -1,0 +1,123 @@
+[
+  {
+    "id": "4910",
+    "displayName": "Sam's Club Acoxpa, Cdmx",
+    "city": "Tlalpan",
+    "state": "Ciudad De Mexico",
+    "postalCode": "14300",
+    "addressLineOne": "Calzada Acoxpa 438",
+    "latitude": 19.297,
+    "longitude": -99.135,
+    "accessPointId": "925cb2d9-3b65-4cd6-a794-45c320d45151"
+  },
+  {
+    "id": "6283",
+    "displayName": "Sam's Club Patio Tlalpan, Cdmx",
+    "city": "Tlalpan",
+    "state": "Ciudad De Mexico",
+    "postalCode": "14420",
+    "addressLineOne": "Arenal 0,colonia  Sta Ursula Xitla",
+    "latitude": 19.28,
+    "longitude": -99.17,
+    "accessPointId": "3e7192cb-d58c-41c6-aced-6023d8d3e156"
+  },
+  {
+    "id": "6467",
+    "displayName": "Sam's Club Cuernavaca, Mor.",
+    "city": "Cuernavaca",
+    "state": "Morelos",
+    "postalCode": "62270",
+    "addressLineOne": "Av.vicente Guerrero 760",
+    "latitude": 18.944,
+    "longitude": -99.228,
+    "accessPointId": "cba60edf-df9a-4342-badb-5ae5b152b474"
+  },
+  {
+    "id": "4973",
+    "displayName": "Sam's Club Civac Cuernavaca, Mor.",
+    "city": "Jiutepec",
+    "state": "Morelos",
+    "postalCode": "62570",
+    "addressLineOne": "Blvd. Cuauhnahuac 4",
+    "latitude": 18.9101,
+    "longitude": -99.1793,
+    "accessPointId": "23da591f-f05c-47c9-95e9-66e3f5d8470b"
+  },
+  {
+    "id": "4957",
+    "displayName": "Sam's Club Cuautla, Mor.",
+    "city": "Tetelcigo",
+    "state": "Morelos",
+    "postalCode": "62751",
+    "addressLineOne": "Camino Real Tetelcingo 23",
+    "latitude": 18.8675,
+    "longitude": -98.9487,
+    "accessPointId": "8685146c-18bb-40b9-86f8-f86ce5e1e4e1"
+  },
+  {
+    "id": "6312",
+    "displayName": "Sam's Club Defensores, Pue.",
+    "city": "Puebla",
+    "state": "Puebla",
+    "postalCode": "72220",
+    "addressLineOne": "Avenida 18 De Noviembre #1045",
+    "latitude": 19.0635,
+    "longitude": -98.1627,
+    "accessPointId": "c965302b-fa85-47a9-957a-8c3e913006f8"
+  },
+  {
+    "id": "6211",
+    "displayName": "Sam's Club Hospital General, Pue.",
+    "city": "Puebla",
+    "state": "Puebla",
+    "postalCode": "72490",
+    "addressLineOne": "Lateral Sur De Periférico Ecológico 701",
+    "latitude": 18.987,
+    "longitude": -98.2388,
+    "accessPointId": "b8d272b6-c1dd-4227-b95b-8d58b10172a1"
+  },
+  {
+    "id": "6263",
+    "displayName": "Sam's Club Puebla Capu, Pue.",
+    "city": "Puebla",
+    "state": "Puebla",
+    "postalCode": "72050",
+    "addressLineOne": "Blvd. Héroes Del 5 De May   2322",
+    "latitude": 19.0754,
+    "longitude": -98.2003,
+    "accessPointId": "89493cec-a2cc-473f-a95b-6108ddede395"
+  },
+  {
+    "id": "6396",
+    "displayName": "Sam's Club Puebla La Noria, Pue.",
+    "city": "Puebla",
+    "state": "Puebla",
+    "postalCode": "72410",
+    "addressLineOne": "Circuito Interior  1920",
+    "latitude": 19.0338,
+    "longitude": -98.2228,
+    "accessPointId": "2e169212-c955-4788-b4da-dd1080e378e6"
+  },
+  {
+    "id": "4988",
+    "displayName": "Sam's Club Forjadores, Pue.",
+    "city": "San Pedro Cholula",
+    "state": "Puebla",
+    "postalCode": "72760",
+    "addressLineOne": "Blvd. Forjadores De Puebla 3401",
+    "latitude": 19.077,
+    "longitude": -98.295,
+    "accessPointId": "ce5ad907-93a8-483a-a5c9-66b7fc40632f"
+  },
+  {
+    "id": "6208",
+    "displayName": "Sam's Club El Molinito, Tlax.",
+    "city": "Apetatitlan De Antonio Carvajal",
+    "state": "Tlaxcala",
+    "postalCode": "90610",
+    "addressLineOne": "Carretera Apizaco Puebla 3",
+    "latitude": 19.342,
+    "longitude": -98.199,
+    "accessPointId": "23018568-a8a4-452c-aea7-9f492fafc8cb"
+  }
+]
