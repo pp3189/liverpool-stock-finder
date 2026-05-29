@@ -536,6 +536,33 @@ export default function App() {
     }
   };
 
+  const handleCopySamsConsoleSnippet = async () => {
+    const endpoint = `${window.location.origin}/api/sams/cookies`;
+    const snippet = `(() => {
+  const cookies = document.cookie;
+  if (!cookies) {
+    alert("Sam's no expuso cookies en esta pagina. Navega un poco y vuelve a intentar.");
+    return;
+  }
+  fetch("${endpoint}", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ cookies })
+  })
+    .then((res) => alert(res.ok ? "Sesion Sam's enviada a Stock Finder." : "Stock Finder no pudo guardar la sesion."))
+    .catch((err) => alert("No se pudo enviar la sesion: " + err.message));
+})();`;
+
+    try {
+      await navigator.clipboard.writeText(snippet);
+      window.open("https://www.sams.com.mx/", "_blank", "noopener,noreferrer");
+      setToast({ message: "Codigo copiado. Pegalo en la consola de la pestaña de Sam's.", type: "success" });
+    } catch {
+      setSamsCookieInput(snippet);
+      setToast({ message: "No se pudo copiar automaticamente; el codigo quedo en el cuadro.", type: "error" });
+    }
+  };
+
   // Automated Background Monitor Polling Ticker
   useEffect(() => {
     if (!isMonitoring) return;
@@ -3763,6 +3790,14 @@ export default function App() {
                 <p className="font-black text-blue-900">Renovacion rapida para operador:</p>
                 <button
                   type="button"
+                  onClick={handleCopySamsConsoleSnippet}
+                  className="mt-1 mb-1 w-full py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-[10px] font-black uppercase tracking-wider cursor-pointer transition-colors flex items-center justify-center gap-1.5"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                  Abrir Sam's y copiar codigo
+                </button>
+                <button
+                  type="button"
                   onClick={handleAutoRefreshSamsCookies}
                   disabled={samsCookieAutoRefreshing}
                   className="mt-1 mb-1 w-full py-2 rounded-xl bg-blue-800 hover:bg-blue-900 disabled:opacity-50 text-white text-[10px] font-black uppercase tracking-wider cursor-pointer transition-colors flex items-center justify-center gap-1.5"
@@ -3770,7 +3805,8 @@ export default function App() {
                   <RefreshCw className={`w-3.5 h-3.5 ${samsCookieAutoRefreshing ? "animate-spin" : ""}`} />
                   {samsCookieAutoRefreshing ? "Renovando en servidor..." : "Renovar automaticamente"}
                 </button>
-                <p>Ejecuta <strong>npm run sams:push-cookies -- URL_DE_TU_APP</strong>, navega Sam's normalmente y presiona Enter.</p>
+                <p>En Sam's, abre consola, pega el codigo copiado y presiona Enter. Si Chrome bloquea pegar, escribe <strong>allow pasting</strong> primero.</p>
+                <p>Alternativa local: <strong>npm run sams:push-cookies -- URL_DE_TU_APP</strong>.</p>
                 <p>Respaldo manual: pega aqui el cURL de una peticion de Sam's o solo la cadena del header <strong>Cookie:</strong>.</p>
               </div>
 
