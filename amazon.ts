@@ -174,7 +174,6 @@ async function fetchSerpApi(params: Record<string, string>): Promise<any> {
   url.searchParams.set("api_key", SERPAPI_API_KEY);
   url.searchParams.set("amazon_domain", SERPAPI_AMAZON_DOMAIN);
   url.searchParams.set("device", "desktop");
-  url.searchParams.set("language", "es_MX");
   if (SERPAPI_NO_CACHE) url.searchParams.set("no_cache", "true");
 
   const controller = new AbortController();
