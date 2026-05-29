@@ -543,7 +543,7 @@ export default function App() {
     alert("Sam's no expuso cookies en esta pagina. Navega un poco y vuelve a intentar.");
     return;
   }
-  const curl = "curl 'https://www.sams.com.mx/' -H 'Cookie: " + cookies.replace(/'/g, "'\\\\''") + "'";
+  const curl = "Cookie: " + cookies;
   const copy = (text) => navigator.clipboard?.writeText(text)
     .then(() => true)
     .catch(() => false);
@@ -560,7 +560,7 @@ export default function App() {
     try {
       await navigator.clipboard.writeText(snippet);
       window.open("https://www.sams.com.mx/", "_blank", "noopener,noreferrer");
-      setToast({ message: "Codigo copiado. Pegalo en la consola de Sam's; luego pega aqui el cURL generado.", type: "success" });
+      setToast({ message: "Codigo copiado. Pegalo en la consola de Sam's; luego pega aqui la Cookie generada.", type: "success" });
     } catch {
       setSamsCookieInput(snippet);
       setToast({ message: "No se pudo copiar automaticamente; el codigo quedo en el cuadro.", type: "error" });
@@ -3809,7 +3809,7 @@ export default function App() {
                   <RefreshCw className={`w-3.5 h-3.5 ${samsCookieAutoRefreshing ? "animate-spin" : ""}`} />
                   {samsCookieAutoRefreshing ? "Renovando en servidor..." : "Renovar automaticamente"}
                 </button>
-                <p>En Sam's, abre consola, pega el codigo copiado y presiona Enter. El codigo copiara el cURL; vuelve aqui y pegalo en el cuadro.</p>
+                <p>En Sam's, abre consola, pega el codigo copiado y presiona Enter. El codigo copiara la Cookie; vuelve aqui y pegala en el cuadro.</p>
                 <p>Alternativa local: <strong>npm run sams:push-cookies -- URL_DE_TU_APP</strong>.</p>
                 <p>Respaldo manual: pega aqui el cURL de una peticion de Sam's o solo la cadena del header <strong>Cookie:</strong>.</p>
               </div>

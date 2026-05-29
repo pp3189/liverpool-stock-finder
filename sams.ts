@@ -19,6 +19,45 @@ let _pxCookiesExpiry = 0;
 let _recentBlockCount = 0;
 let _recentBlockTimestamp = 0;
 
+function normalizeSamsCookieInput(rawCookies: string): string {
+  let value = String(rawCookies || "").trim();
+  if (!value) return "";
+
+  value = value
+    .replace(/\^"/g, "\"")
+    .replace(/\^'/g, "'")
+    .replace(/\r?\n/g, " ")
+    .trim();
+
+  const cookieHeaderMatches = [
+    ...value.matchAll(/(?:^|\s)(?:-H|--header)\s+(["'])?[Cc]ookie:\s*([\s\S]*?)(?:\1|(?:\s+-[A-Za-z-]+\s)|$)/g),
+  ];
+  const plainCookieMatches = [
+    ...value.matchAll(/(?:^|\s)[Cc]ookie:\s*([\s\S]*?)(?:\s+-[A-Za-z-]+\s|$)/g),
+  ];
+
+  if (cookieHeaderMatches.length > 0) {
+    value = cookieHeaderMatches[cookieHeaderMatches.length - 1][2].trim();
+  } else if (plainCookieMatches.length > 0) {
+    value = plainCookieMatches[plainCookieMatches.length - 1][1].trim();
+  }
+
+  value = value
+    .replace(/^["']|["']$/g, "")
+    .replace(/\\'/g, "'")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+
+  // A real Cookie header is only name=value pairs separated by semicolons.
+  const pairs = value
+    .split(";")
+    .map((part) => part.trim())
+    .filter((part) => /^[^=;\s]+=[^;\r\n]+$/.test(part))
+    .filter((part) => !/^(curl|fetch|\-\-|payload=)/i.test(part));
+
+  return pairs.join("; ");
+}
+
 export function recordPxBlock(): void {
   _recentBlockCount++;
   _recentBlockTimestamp = Date.now();
@@ -35,7 +74,10 @@ export function isSessionBurned(): boolean {
 }
 
 export function setSamsPxCookies(rawCookies: string): void {
-  _pxCookies = rawCookies.trim();
+  _pxCookies = normalizeSamsCookieInput(rawCookies);
+  if (!_pxCookies) {
+    throw new Error("No se detecto un header Cookie valido de Sam's.");
+  }
   _pxCookiesExpiry = Date.now() + PX_COOKIE_TTL;
 }
 

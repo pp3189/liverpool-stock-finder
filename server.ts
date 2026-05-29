@@ -169,8 +169,12 @@ app.post("/api/sams/cookies", (req, res) => {
   if (!cookies || typeof cookies !== "string" || cookies.trim().length < 10) {
     return res.status(400).json({ error: "Proporciona una cadena de cookies válida." });
   }
-  setSamsPxCookies(cookies);
-  return res.json({ success: true, message: "Cookies de Sam's Club actualizadas (válidas ~90 min)." });
+  try {
+    setSamsPxCookies(cookies);
+    return res.json({ success: true, message: "Cookies de Sam's Club actualizadas (válidas ~90 min)." });
+  } catch (error: any) {
+    return res.status(400).json({ error: error?.message || "No se pudo leer una cookie valida de Sam's." });
+  }
 });
 
 app.get("/api/sams/cookie-status", (_req, res) => {
