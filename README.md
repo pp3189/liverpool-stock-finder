@@ -79,3 +79,17 @@ Si `SERPAPI_API_KEY` esta configurada, Amazon usa SerpApi primero:
 - El scraping directo queda desactivado por defecto cuando SerpApi esta configurado. Para permitir respaldo directo, define `SERPAPI_FALLBACK_DIRECT="true"`.
 
 Puedes usar scraping directo solo como respaldo local. En produccion conviene usar una fuente permitida/estable: API oficial o afiliada cuando aplique, proveedor de datos e-commerce, o un worker de navegador real con sesion persistente y rotacion responsable.
+
+### Renovar cookies de Sam's sin DevTools
+
+Para que el operador/admin actualice la sesion de Sam's sin copiar cURL desde DevTools:
+
+```bash
+npm run sams:push-cookies -- https://tu-app.onrender.com
+```
+
+El comando abre Chrome, permite navegar Sam's normalmente, extrae cookies tecnicas de Sam's y las envia a `/api/sams/cookies`. Si solo quieres imprimir la cadena para pegarla manualmente:
+
+```bash
+npm run sams:push-cookies -- --print-only
+```

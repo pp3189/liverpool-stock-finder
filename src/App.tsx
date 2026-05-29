@@ -3736,11 +3736,9 @@ export default function App() {
               </div>
 
               <div className="mb-4 p-3 bg-blue-50 rounded-xl border border-blue-100 text-[10px] text-blue-800 font-semibold leading-relaxed space-y-1">
-                <p className="font-black text-blue-900">Como obtener las cookies:</p>
-                <p>1. Abre <strong>sams.com.mx</strong> en Chrome y navega normalmente.</p>
-                <p>2. Abre DevTools (F12) → pestaña <strong>Network</strong> → cualquier peticion.</p>
-                <p>3. Clic derecho sobre la peticion → <strong>Copy → Copy as cURL</strong>.</p>
-                <p>4. Pega el cURL completo aqui abajo. O solo la cadena del header <strong>Cookie:</strong>.</p>
+                <p className="font-black text-blue-900">Renovacion rapida para operador:</p>
+                <p>Ejecuta <strong>npm run sams:push-cookies -- URL_DE_TU_APP</strong>, navega Sam's normalmente y presiona Enter.</p>
+                <p>Respaldo manual: pega aqui el cURL de una peticion de Sam's o solo la cadena del header <strong>Cookie:</strong>.</p>
               </div>
 
               <textarea

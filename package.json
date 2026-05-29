@@ -11,7 +11,8 @@
     "lint": "tsc --noEmit",
     "sams:extract-clubs": "tsx scripts/extract-sams-clubs.ts",
     "sams:browser-check": "tsx scripts/check-sams-browser.ts",
-    "sams:prepare-session": "tsx scripts/prepare-sams-session.ts"
+    "sams:prepare-session": "tsx scripts/prepare-sams-session.ts",
+    "sams:push-cookies": "tsx scripts/push-sams-cookies.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
