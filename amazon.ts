@@ -13,6 +13,7 @@ const AMAZON_EXTERNAL_FALLBACK_DIRECT = process.env.AMAZON_EXTERNAL_FALLBACK_DIR
 const SERPAPI_API_KEY = process.env.SERPAPI_API_KEY?.trim() || "";
 const SERPAPI_AMAZON_DOMAIN = process.env.SERPAPI_AMAZON_DOMAIN?.trim() || "amazon.com.mx";
 const SERPAPI_NO_CACHE = process.env.SERPAPI_NO_CACHE === "true";
+const SERPAPI_FALLBACK_DIRECT = process.env.SERPAPI_FALLBACK_DIRECT === "true";
 
 // Search queries that cover official Pokémon products on Amazon México.
 // Multiple queries = better coverage. Results are deduplicated by ASIN.
@@ -537,20 +538,29 @@ export function clearAmazonCache() {
 export async function buscarAmazon(query: string = ""): Promise<any[]> {
   const q = query.trim();
   const asin = extractAsin(q);
+  let serpApiError = "";
 
   if (SERPAPI_API_KEY) {
     if (!q) {
       const serpCatalog = await fetchCatalogViaSerpApi().catch((error) => {
         console.error("[Amazon] SerpApi catálogo falló:", error?.message || error);
+        serpApiError = error?.message || "SerpApi no pudo consultar el catálogo de Amazon México.";
         return null;
       });
       if (serpCatalog && serpCatalog.length > 0) return serpCatalog;
+      if (!serpApiError) {
+        serpApiError = "SerpApi no devolvió productos para el catálogo Pokémon en Amazon México.";
+      }
     } else if (asin) {
       const serpProduct = await fetchProductViaSerpApi(asin).catch((error) => {
         console.error("[Amazon] SerpApi producto falló:", error?.message || error);
+        serpApiError = error?.message || `SerpApi no pudo consultar el ASIN ${asin}.`;
         return null;
       });
       if (serpProduct) return [serpProduct];
+      if (!serpApiError) {
+        serpApiError = `SerpApi no devolvió un producto disponible para el ASIN ${asin}.`;
+      }
     }
   }
 
@@ -560,6 +570,13 @@ export async function buscarAmazon(query: string = ""): Promise<any[]> {
     return null;
   });
   if (external) return external;
+
+  if (SERPAPI_API_KEY && !SERPAPI_FALLBACK_DIRECT) {
+    throw new Error(
+      serpApiError ||
+        "Amazon está configurado para usar SerpApi, pero no devolvió resultados. Revisa la API key, el dominio amazon.com.mx o el límite de consultas."
+    );
+  }
 
   // Empty query → catalog mode
   if (!q) return fetchCatalog();

@@ -29,6 +29,7 @@ Variables recomendadas en Render:
 SERPAPI_API_KEY="tu_llave_serpapi"
 SERPAPI_AMAZON_DOMAIN="amazon.com.mx"
 SERPAPI_NO_CACHE="false"
+SERPAPI_FALLBACK_DIRECT="false"
 
 AMAZON_EXTERNAL_URL="https://tu-worker.example.com/amazon"
 AMAZON_EXTERNAL_TOKEN="token-opcional"
@@ -75,6 +76,6 @@ Si `SERPAPI_API_KEY` esta configurada, Amazon usa SerpApi primero:
 
 - `engine=amazon_product` cuando el usuario ingresa un ASIN.
 - `engine=amazon` con `amazon_domain=amazon.com.mx` cuando el usuario deja vacio el campo y pide catalogo.
-- El scraping directo queda como respaldo si SerpApi no devuelve resultados.
+- El scraping directo queda desactivado por defecto cuando SerpApi esta configurado. Para permitir respaldo directo, define `SERPAPI_FALLBACK_DIRECT="true"`.
 
 Puedes usar scraping directo solo como respaldo local. En produccion conviene usar una fuente permitida/estable: API oficial o afiliada cuando aplique, proveedor de datos e-commerce, o un worker de navegador real con sesion persistente y rotacion responsable.
