@@ -1,3 +1,4 @@
+import "dotenv/config";
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
@@ -9,7 +10,7 @@ import { buscarSams, buscarSamsNacional, setSamsPxCookies, getSamsPxCookieStatus
 import { startSamsCookieAutoRefresh, refreshSamsCookiesViaPlaywright } from "./sams-cookie-refresher";
 
 const app = express();
-const PORT = 3000;
+const PORT = Number(process.env.PORT || 3000);
 
 app.use(express.json());
 

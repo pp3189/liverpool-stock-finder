@@ -8,7 +8,10 @@ const ITEM_BY_ID_BASE_URL =
   "https://www.sams.com.mx/orchestra/pdp/graphql/ItemById/7ca587e81e41241760b794ca2592edff23565e9aca091c2ac0d3ad0722303873";
 
 // PerimeterX cookie store — cookies extracted from a real browser session
-const PX_COOKIE_TTL = 1000 * 60 * 90; // 90 minutes
+const PX_COOKIE_TTL = Number(process.env.SAMS_COOKIE_TTL_MS || 1000 * 60 * 90); // 90 minutes
+const SAMS_EXTERNAL_URL = process.env.SAMS_EXTERNAL_URL?.trim() || "";
+const SAMS_EXTERNAL_TOKEN = process.env.SAMS_EXTERNAL_TOKEN?.trim() || "";
+const SAMS_EXTERNAL_FALLBACK_DIRECT = process.env.SAMS_EXTERNAL_FALLBACK_DIRECT !== "false";
 let _pxCookies = "";
 let _pxCookiesExpiry = 0;
 
@@ -34,6 +37,12 @@ export function isSessionBurned(): boolean {
 export function setSamsPxCookies(rawCookies: string): void {
   _pxCookies = rawCookies.trim();
   _pxCookiesExpiry = Date.now() + PX_COOKIE_TTL;
+}
+
+const initialSamsCookies = (process.env.SAMS_COOKIE_STRING || process.env.SAMS_COOKIES || "").trim();
+if (initialSamsCookies) {
+  setSamsPxCookies(initialSamsCookies);
+  console.log("[Sam's] Cookies iniciales cargadas desde variables de entorno.");
 }
 
 export function getSamsPxCookieStatus(): { valid: boolean; expiresInMs?: number } {
@@ -428,6 +437,61 @@ function productToRows(product: any, node: SamsNode) {
   }));
 }
 
+function normalizeProviderRows(payload: any): any[] {
+  const rows = Array.isArray(payload) ? payload : payload?.tiendas || payload?.results || payload?.items || [];
+  if (!Array.isArray(rows)) return [];
+
+  return rows
+    .map((item: any, idx: number) => ({
+      storeId: String(item.storeId || item.clubId || item.id || `SAMS-EXT-${idx}`),
+      storeName: String(item.storeName || item.clubName || item.name || "Sam's Club"),
+      numberOfPieces: Number(item.numberOfPieces || item.quantity || 1),
+      available: String(item.available ?? item.inStock ?? true),
+      stateName: String(item.stateName || item.state || "Sam's Club"),
+    }))
+    .filter((item: any) => item.storeName && item.available !== "false");
+}
+
+async function buscarSamsViaExternalProvider(sku: string, cp?: string): Promise<any[] | null> {
+  if (!SAMS_EXTERNAL_URL) return null;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), Number(process.env.SAMS_EXTERNAL_TIMEOUT_MS || 60000));
+  try {
+    const response = await fetch(SAMS_EXTERNAL_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(SAMS_EXTERNAL_TOKEN ? { Authorization: `Bearer ${SAMS_EXTERNAL_TOKEN}` } : {}),
+      },
+      body: JSON.stringify({
+        store: "sams",
+        country: "MX",
+        sku,
+        cp: cp || null,
+        mode: cp ? "postalCode" : "national",
+      }),
+      signal: controller.signal,
+    });
+
+    const text = await response.text();
+    let payload: any;
+    try {
+      payload = text ? JSON.parse(text) : {};
+    } catch {
+      throw new Error(`Proveedor Sam's respondió texto no JSON: ${text.slice(0, 120)}`);
+    }
+
+    if (!response.ok) {
+      throw new Error(payload?.error || `Proveedor Sam's HTTP ${response.status}`);
+    }
+
+    return normalizeProviderRows(payload);
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 // Convert the flat JSON club record to the SamsNode shape expected by the rest of the code
 function jsonClubToNode(club: any): SamsNode {
   return {
@@ -450,7 +514,7 @@ function jsonClubToNode(club: any): SamsNode {
 }
 
 // Search all saved clubs from data/sams-clubs.json — no CP required
-export async function buscarSamsNacional(sku: string) {
+async function buscarSamsNacionalDirect(sku: string) {
   const rawClubs: any[] = JSON.parse(readFileSync(resolve("data/sams-clubs.json"), "utf-8"));
   const nodes: SamsNode[] = rawClubs.map(jsonClubToNode);
   const results: any[] = [];
@@ -477,7 +541,7 @@ export async function buscarSamsNacional(sku: string) {
   return [...unique.values()];
 }
 
-export async function buscarSams(sku: string, cp?: string) {
+async function buscarSamsDirect(sku: string, cp?: string) {
   const clean = cleanCp(cp);
   if (!clean) return [];
 
@@ -503,4 +567,27 @@ export async function buscarSams(sku: string, cp?: string) {
   }
 
   return [...unique.values()];
+}
+
+export async function buscarSamsNacional(sku: string) {
+  const external = await buscarSamsViaExternalProvider(sku).catch((error) => {
+    console.error("[Sam's] Proveedor externo falló:", error?.message || error);
+    if (!SAMS_EXTERNAL_FALLBACK_DIRECT) throw error;
+    return null;
+  });
+  if (external) return external;
+
+  return buscarSamsNacionalDirect(sku);
+}
+
+export async function buscarSams(sku: string, cp?: string) {
+  const clean = cleanCp(cp);
+  const external = await buscarSamsViaExternalProvider(sku, clean || undefined).catch((error) => {
+    console.error("[Sam's] Proveedor externo falló:", error?.message || error);
+    if (!SAMS_EXTERNAL_FALLBACK_DIRECT) throw error;
+    return null;
+  });
+  if (external) return external;
+
+  return buscarSamsDirect(sku, cp);
 }

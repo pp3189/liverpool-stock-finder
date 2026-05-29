@@ -7,14 +7,24 @@ import { join } from "path";
 const execFileAsync = promisify(execFile);
 
 const BASE_URL = "https://www.amazon.com.mx";
+const AMAZON_EXTERNAL_URL = process.env.AMAZON_EXTERNAL_URL?.trim() || "";
+const AMAZON_EXTERNAL_TOKEN = process.env.AMAZON_EXTERNAL_TOKEN?.trim() || "";
+const AMAZON_EXTERNAL_FALLBACK_DIRECT = process.env.AMAZON_EXTERNAL_FALLBACK_DIRECT !== "false";
+const SERPAPI_API_KEY = process.env.SERPAPI_API_KEY?.trim() || "";
+const SERPAPI_AMAZON_DOMAIN = process.env.SERPAPI_AMAZON_DOMAIN?.trim() || "amazon.com.mx";
+const SERPAPI_NO_CACHE = process.env.SERPAPI_NO_CACHE === "true";
 
 // Search queries that cover official Pokémon products on Amazon México.
 // Multiple queries = better coverage. Results are deduplicated by ASIN.
-const CATALOG_SEARCH_URLS = [
-  `${BASE_URL}/s?k=pokemon+tcg+cartas&i=toys`,
-  `${BASE_URL}/s?k=pokemon+coleccion+booster&i=toys`,
-  `${BASE_URL}/s?k=pokemon+juguetes+figuras&i=toys`,
+const CATALOG_SEARCH_TERMS = [
+  "pokemon tcg cartas",
+  "pokemon coleccion booster",
+  "pokemon juguetes figuras",
 ];
+
+const CATALOG_SEARCH_URLS = CATALOG_SEARCH_TERMS.map(
+  (term) => `${BASE_URL}/s?k=${encodeURIComponent(term).replace(/%20/g, "+")}&i=toys`
+);
 
 const ALLOWED_SELLERS = new Set([
   "amazon mexico",
@@ -37,6 +47,187 @@ const HEADERS = {
 let _cache: any[] = [];
 let _cacheExpiry = 0;
 const CACHE_TTL = 30 * 60 * 1000;
+
+function normalizeProviderRows(payload: any): any[] {
+  const rows = Array.isArray(payload) ? payload : payload?.tiendas || payload?.results || payload?.items || [];
+  if (!Array.isArray(rows)) return [];
+
+  return rows
+    .map((item: any, idx: number) => ({
+      storeId: String(item.storeId || item.asin || item.id || `AMAZON-EXT-${idx}`),
+      storeName: String(item.storeName || item.title || item.name || "Producto Amazon"),
+      numberOfPieces: Number(item.numberOfPieces || item.quantity || 1),
+      available: String(item.available ?? item.inStock ?? true),
+      stateName: String(item.stateName || "Amazon México"),
+      _productUrl: item._productUrl || item.url || item.productUrl,
+      _price: item._price || item.price,
+      _seller: item._seller || item.seller || "Amazon.com.mx",
+    }))
+    .filter((item: any) => item.storeName && item.available !== "false");
+}
+
+async function fetchAmazonViaExternalProvider(query: string): Promise<any[] | null> {
+  if (!AMAZON_EXTERNAL_URL) return null;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), Number(process.env.AMAZON_EXTERNAL_TIMEOUT_MS || 45000));
+  try {
+    const response = await fetch(AMAZON_EXTERNAL_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(AMAZON_EXTERNAL_TOKEN ? { Authorization: `Bearer ${AMAZON_EXTERNAL_TOKEN}` } : {}),
+      },
+      body: JSON.stringify({
+        store: "amazon",
+        country: "MX",
+        query,
+        mode: query ? "asin" : "catalog",
+      }),
+      signal: controller.signal,
+    });
+
+    const text = await response.text();
+    let payload: any;
+    try {
+      payload = text ? JSON.parse(text) : {};
+    } catch {
+      throw new Error(`Proveedor Amazon respondió texto no JSON: ${text.slice(0, 120)}`);
+    }
+
+    if (!response.ok) {
+      throw new Error(payload?.error || `Proveedor Amazon HTTP ${response.status}`);
+    }
+
+    return normalizeProviderRows(payload);
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function getSerpApiString(value: any): string {
+  if (Array.isArray(value)) return value.filter(Boolean).join(" | ");
+  return String(value || "").trim();
+}
+
+function serpApiAvailable(stock: string, title = ""): boolean {
+  const lower = `${stock} ${title}`.toLowerCase();
+  return !(
+    lower.includes("no disponible") ||
+    lower.includes("agotado") ||
+    lower.includes("out of stock") ||
+    lower.includes("currently unavailable")
+  );
+}
+
+function serpApiProductToRow(product: any, asinFallback?: string): any | null {
+  const asin = String(product?.asin || asinFallback || "").toUpperCase();
+  const title = getSerpApiString(product?.title);
+  if (!asin || !title || !POKEMON_REGEX.test(title)) return null;
+
+  const stock = getSerpApiString(product?.stock || product?.availability);
+  if (!serpApiAvailable(stock, title)) return null;
+
+  const price = getSerpApiString(product?.price || product?.buybox?.price);
+  const seller =
+    getSerpApiString(product?.sold_by?.name || product?.seller || product?.buybox?.seller) ||
+    "Amazon.com.mx";
+
+  return {
+    storeId: `AMAZON-${asin}`,
+    storeName: title,
+    numberOfPieces: 1,
+    available: "true",
+    stateName: "Amazon México",
+    _productUrl: product?.link || product?.link_clean || `${BASE_URL}/dp/${asin}`,
+    _price: price,
+    _seller: seller,
+  };
+}
+
+function serpApiSearchItemToRow(item: any): any | null {
+  const asin = String(item?.asin || "").toUpperCase();
+  const title = getSerpApiString(item?.title);
+  if (!asin || !title || !POKEMON_REGEX.test(title)) return null;
+
+  const availability = getSerpApiString(item?.availability || item?.stock);
+  if (!serpApiAvailable(availability, title)) return null;
+
+  return {
+    storeId: `AMAZON-${asin}`,
+    storeName: title,
+    numberOfPieces: 1,
+    available: "true",
+    stateName: "Amazon México",
+    _productUrl: item?.link || item?.link_clean || `${BASE_URL}/dp/${asin}`,
+    _price: getSerpApiString(item?.price),
+    _seller: "Amazon.com.mx",
+  };
+}
+
+async function fetchSerpApi(params: Record<string, string>): Promise<any> {
+  const url = new URL("https://serpapi.com/search.json");
+  for (const [key, value] of Object.entries(params)) {
+    if (value) url.searchParams.set(key, value);
+  }
+  url.searchParams.set("api_key", SERPAPI_API_KEY);
+  url.searchParams.set("amazon_domain", SERPAPI_AMAZON_DOMAIN);
+  url.searchParams.set("device", "desktop");
+  url.searchParams.set("language", "es_MX");
+  if (SERPAPI_NO_CACHE) url.searchParams.set("no_cache", "true");
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), Number(process.env.SERPAPI_TIMEOUT_MS || 45000));
+  try {
+    const response = await fetch(url, { signal: controller.signal });
+    const payload: any = await response.json().catch(() => ({}));
+    if (!response.ok || payload?.error) {
+      throw new Error(payload?.error || `SerpApi HTTP ${response.status}`);
+    }
+    return payload;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function fetchProductViaSerpApi(asin: string): Promise<any | null> {
+  if (!SERPAPI_API_KEY) return null;
+
+  const payload = await fetchSerpApi({
+    engine: "amazon_product",
+    asin,
+  });
+
+  return serpApiProductToRow(payload?.product_results, asin);
+}
+
+async function fetchCatalogViaSerpApi(): Promise<any[] | null> {
+  if (!SERPAPI_API_KEY) return null;
+  if (_cache.length && Date.now() < _cacheExpiry) return _cache;
+
+  const unique = new Map<string, any>();
+  for (const term of CATALOG_SEARCH_TERMS) {
+    const payload = await fetchSerpApi({
+      engine: "amazon",
+      k: term,
+      i: "toys",
+    });
+
+    const rows = Array.isArray(payload?.organic_results)
+      ? payload.organic_results.map(serpApiSearchItemToRow).filter(Boolean)
+      : [];
+
+    for (const row of rows) unique.set(row.storeId, row);
+  }
+
+  const results = [...unique.values()];
+  if (results.length > 0) {
+    _cache = results;
+    _cacheExpiry = Date.now() + CACHE_TTL;
+  }
+
+  return results;
+}
 
 function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
@@ -345,12 +536,35 @@ export function clearAmazonCache() {
 
 export async function buscarAmazon(query: string = ""): Promise<any[]> {
   const q = query.trim();
+  const asin = extractAsin(q);
+
+  if (SERPAPI_API_KEY) {
+    if (!q) {
+      const serpCatalog = await fetchCatalogViaSerpApi().catch((error) => {
+        console.error("[Amazon] SerpApi catálogo falló:", error?.message || error);
+        return null;
+      });
+      if (serpCatalog && serpCatalog.length > 0) return serpCatalog;
+    } else if (asin) {
+      const serpProduct = await fetchProductViaSerpApi(asin).catch((error) => {
+        console.error("[Amazon] SerpApi producto falló:", error?.message || error);
+        return null;
+      });
+      if (serpProduct) return [serpProduct];
+    }
+  }
+
+  const external = await fetchAmazonViaExternalProvider(q).catch((error) => {
+    console.error("[Amazon] Proveedor externo falló:", error?.message || error);
+    if (!AMAZON_EXTERNAL_FALLBACK_DIRECT) throw error;
+    return null;
+  });
+  if (external) return external;
 
   // Empty query → catalog mode
   if (!q) return fetchCatalog();
 
   // Single ASIN
-  const asin = extractAsin(q);
   if (asin) {
     const product = await fetchAndParseProduct(asin);
     return product ? [product] : [];

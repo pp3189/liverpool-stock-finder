@@ -21,20 +21,29 @@ function isPxOrSecurityCookie(name: string): boolean {
 }
 
 export async function refreshSamsCookiesViaPlaywright(): Promise<void> {
+  if (process.env.SAMS_AUTO_REFRESH === "false") {
+    console.log("[Sam's] Auto-refresh desactivado por SAMS_AUTO_REFRESH=false.");
+    return;
+  }
+
   if (_refreshing) return;
   _refreshing = true;
   let browser: Browser | undefined;
 
   try {
     console.log("[Sam's] Renovando cookies — abriendo Chrome...");
+    const headless = process.env.SAMS_HEADLESS
+      ? process.env.SAMS_HEADLESS !== "false"
+      : process.env.NODE_ENV === "production";
+    const channel = process.env.SAMS_BROWSER_CHANNEL?.trim() || undefined;
 
     browser = await chromium.launch({
-      channel: "chrome",
-      headless: false,
+      ...(channel ? { channel } : {}),
+      headless,
       args: [
         "--no-sandbox",
         "--disable-blink-features=AutomationControlled",
-        "--window-position=-32000,-32000",
+        ...(headless ? [] : ["--window-position=-32000,-32000"]),
         "--window-size=1366,768",
       ],
     });
@@ -76,6 +85,11 @@ export async function refreshSamsCookiesViaPlaywright(): Promise<void> {
 }
 
 export function startSamsCookieAutoRefresh(): void {
+  if (process.env.SAMS_AUTO_REFRESH === "false" || process.env.SAMS_EXTERNAL_URL) {
+    console.log("[Sam's] Auto-refresh local omitido; se usará proveedor externo/cookies manuales.");
+    return;
+  }
+
   // Trigger immediately if no valid cookies on startup
   const initial = getSamsPxCookieStatus();
   if (!initial.valid) {
