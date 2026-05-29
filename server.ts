@@ -165,7 +165,6 @@ app.post("/api/buscar", async (req, res) => {
 
 // Sam's Club PX cookie management
 app.post("/api/sams/cookies", (req, res) => {
-  setSamsCookieCors(req, res);
   const { cookies } = req.body;
   if (!cookies || typeof cookies !== "string" || cookies.trim().length < 10) {
     return res.status(400).json({ error: "Proporciona una cadena de cookies válida." });
@@ -176,21 +175,6 @@ app.post("/api/sams/cookies", (req, res) => {
 
 app.get("/api/sams/cookie-status", (_req, res) => {
   return res.json(getSamsPxCookieStatus());
-});
-
-function setSamsCookieCors(req: express.Request, res: express.Response) {
-  const origin = String(req.headers.origin || "");
-  if (/^https:\/\/([a-z0-9-]+\.)?sams\.com\.mx$/i.test(origin)) {
-    res.setHeader("Access-Control-Allow-Origin", origin);
-    res.setHeader("Vary", "Origin");
-    res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-  }
-}
-
-app.options("/api/sams/cookies", (req, res) => {
-  setSamsCookieCors(req, res);
-  return res.sendStatus(204);
 });
 
 // Trigger a Playwright cookie refresh on demand
