@@ -292,6 +292,7 @@ export default function App() {
   const [showSamsCookieModal, setShowSamsCookieModal] = useState(false);
   const [samsCookieInput, setSamsCookieInput] = useState("");
   const [samsCookieSaving, setSamsCookieSaving] = useState(false);
+  const [samsCookieAutoRefreshing, setSamsCookieAutoRefreshing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<SearchResult | null>(null);
@@ -509,6 +510,29 @@ export default function App() {
       setToast({ message: "No se pudo conectar al servidor.", type: "error" });
     } finally {
       setSamsCookieSaving(false);
+    }
+  };
+
+  const handleAutoRefreshSamsCookies = async () => {
+    setSamsCookieAutoRefreshing(true);
+    try {
+      const res = await fetch("/api/sams/auto-refresh", { method: "POST" });
+      const data = await res.json();
+      if (res.ok && data.valid) {
+        setSamsCookieValid(true);
+        setSamsCookieExpiresInMs(data.expiresInMs);
+        setShowSamsCookieModal(false);
+        setToast({ message: "Sesion Sam's renovada automaticamente.", type: "success" });
+      } else {
+        setToast({
+          message: data.error || "No se pudo renovar automaticamente. Usa el comando local o pega cookies manualmente.",
+          type: "error"
+        });
+      }
+    } catch {
+      setToast({ message: "No se pudo conectar al renovador automatico.", type: "error" });
+    } finally {
+      setSamsCookieAutoRefreshing(false);
     }
   };
 
@@ -3737,6 +3761,15 @@ export default function App() {
 
               <div className="mb-4 p-3 bg-blue-50 rounded-xl border border-blue-100 text-[10px] text-blue-800 font-semibold leading-relaxed space-y-1">
                 <p className="font-black text-blue-900">Renovacion rapida para operador:</p>
+                <button
+                  type="button"
+                  onClick={handleAutoRefreshSamsCookies}
+                  disabled={samsCookieAutoRefreshing}
+                  className="mt-1 mb-1 w-full py-2 rounded-xl bg-blue-800 hover:bg-blue-900 disabled:opacity-50 text-white text-[10px] font-black uppercase tracking-wider cursor-pointer transition-colors flex items-center justify-center gap-1.5"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${samsCookieAutoRefreshing ? "animate-spin" : ""}`} />
+                  {samsCookieAutoRefreshing ? "Renovando en servidor..." : "Renovar automaticamente"}
+                </button>
                 <p>Ejecuta <strong>npm run sams:push-cookies -- URL_DE_TU_APP</strong>, navega Sam's normalmente y presiona Enter.</p>
                 <p>Respaldo manual: pega aqui el cURL de una peticion de Sam's o solo la cadena del header <strong>Cookie:</strong>.</p>
               </div>
@@ -3764,7 +3797,7 @@ export default function App() {
                 </button>
                 <button
                   onClick={handleSaveSamsCookies}
-                  disabled={samsCookieSaving || !samsCookieInput.trim()}
+                  disabled={samsCookieSaving || samsCookieAutoRefreshing || !samsCookieInput.trim()}
                   className="flex-1 py-2.5 rounded-xl bg-blue-800 hover:bg-blue-900 disabled:opacity-50 text-white text-xs font-black cursor-pointer transition-colors flex items-center justify-center gap-1.5"
                 >
                   {samsCookieSaving ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}

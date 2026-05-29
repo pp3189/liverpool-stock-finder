@@ -182,6 +182,12 @@ app.post("/api/sams/auto-refresh", async (_req, res) => {
   try {
     await refreshSamsCookiesViaPlaywright();
     const status = getSamsPxCookieStatus();
+    if (!status.valid) {
+      return res.status(503).json({
+        error: "No se pudo renovar la sesion automaticamente en este servidor. Usa el comando local o pega cookies manualmente.",
+        ...status,
+      });
+    }
     return res.json({ success: true, ...status });
   } catch (err: any) {
     return res.status(500).json({ error: err?.message || "Error al renovar cookies via Playwright." });
